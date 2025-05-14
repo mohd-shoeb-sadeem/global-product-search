@@ -20,6 +20,10 @@ import {
 } from "./api/products";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize services
+  const socialMediaService = new SocialMediaService();
+  const videoService = new VideoService();
+  
   // prefix all routes with /api
   const apiRouter = express.Router();
   
@@ -261,6 +265,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false,
         message: 'No auto-updates were running'
       });
+    }
+  });
+
+  // Social Media routes
+  apiRouter.get('/products/:id/social-media', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+      const socialMediaContent = await socialMediaService.getProductSocialMediaPosts(id, limit);
+      res.json(socialMediaContent);
+    } catch (error) {
+      console.error('Error fetching social media content:', error);
+      res.status(500).json({ message: 'Failed to fetch social media content' });
+    }
+  });
+
+  apiRouter.get('/social-media/trending', async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+      const trendingPosts = await socialMediaService.getTrendingSocialMediaPosts(limit);
+      res.json(trendingPosts);
+    } catch (error) {
+      console.error('Error fetching trending social media posts:', error);
+      res.status(500).json({ message: 'Failed to fetch trending posts' });
+    }
+  });
+
+  // Video routes
+  apiRouter.get('/products/:id/videos', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 5;
+      const videoContent = await videoService.getProductVideoReviews(id, limit);
+      res.json(videoContent);
+    } catch (error) {
+      console.error('Error fetching video content:', error);
+      res.status(500).json({ message: 'Failed to fetch video content' });
+    }
+  });
+
+  apiRouter.get('/videos/trending', async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+      const trendingVideos = await videoService.getTrendingVideoReviews(limit);
+      res.json(trendingVideos);
+    } catch (error) {
+      console.error('Error fetching trending videos:', error);
+      res.status(500).json({ message: 'Failed to fetch trending videos' });
+    }
+  });
+
+  apiRouter.get('/products/:id/top-video', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      
+      const topVideo = await videoService.getMostImpactfulVideoReview(id);
+      if (!topVideo) {
+        return res.status(404).json({ message: "No video reviews found" });
+      }
+      
+      res.json(topVideo);
+    } catch (error) {
+      console.error('Error fetching top video:', error);
+      res.status(500).json({ message: 'Failed to fetch top video' });
     }
   });
 

@@ -37,14 +37,14 @@ export class VideoService {
     const subscriberWeight = 0.01; // For channel subscribers
     
     // Get view count or default to 0
-    const viewCount = video.viewCount || 0;
+    const viewCount = video.viewCount ?? 0;
     
     // Calculate base engagement score
     // We estimate likes/comments if not provided based on typical ratios
-    const likes = video.likeCount || Math.floor(viewCount * 0.03); // ~3% like ratio default
-    const comments = video.commentCount || Math.floor(viewCount * 0.002); // ~0.2% comment ratio default
-    const shares = video.shareCount || Math.floor(viewCount * 0.005); // ~0.5% share ratio default
-    const subscribers = video.channelSubscriberCount || 0;
+    const likes = video.likeCount ?? Math.floor(viewCount * 0.03); // ~3% like ratio default
+    const comments = video.commentCount ?? Math.floor(viewCount * 0.002); // ~0.2% comment ratio default
+    const shares = video.shareCount ?? Math.floor(viewCount * 0.005); // ~0.5% share ratio default
+    const subscribers = video.channelSubscriberCount ?? 0;
     
     let score = 
       viewCount * viewWeight +
@@ -55,8 +55,9 @@ export class VideoService {
     
     // Apply duration quality factor
     // Videos between 5-15 minutes get highest score, shorter/longer slightly less
-    if (video.duration) {
-      const durationInMinutes = video.duration / 60; // Convert seconds to minutes
+    const duration = video.duration ?? 0;
+    if (duration > 0) {
+      const durationInMinutes = duration / 60; // Convert seconds to minutes
       let durationFactor = 1;
       
       if (durationInMinutes < 3) {
@@ -73,9 +74,10 @@ export class VideoService {
     score *= platformMultiplier;
     
     // Apply content quality factor (if available)
-    if (video.videoQuality) {
+    const videoQuality = video.videoQuality ?? 0;
+    if (videoQuality > 0) {
       // Scale from 0.7 (low quality) to 1.3 (high quality)
-      const qualityFactor = 0.7 + (video.videoQuality / 5) * 0.6; 
+      const qualityFactor = 0.7 + (videoQuality / 5) * 0.6; 
       score *= qualityFactor;
     }
     
@@ -240,20 +242,26 @@ export class VideoService {
    * Get trending video reviews across all products
    */
   public async getTrendingVideoReviews(limit = 10): Promise<VideoReview[]> {
-    // Get videos with at least 1000 views from the last 30 days
+    // Get all videos - we'll filter in memory
+    const videos = await db
+      .select()
+      .from(videoReviews);
+    
+    // Filter for videos with at least 1000 views from the last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    const recentVideos = await db
-      .select()
-      .from(videoReviews)
-      .where(and(
-        gte(videoReviews.viewCount || 0, 1000),
-        or(
-          videoReviews.publishedAt >= thirtyDaysAgo,
-          isNull(videoReviews.publishedAt)
-        )
-      ));
+    const recentVideos = videos.filter(video => {
+      // Check for minimum views
+      const viewCount = video.viewCount ?? 0;
+      if (viewCount < 1000) return false;
+      
+      // Check for recency
+      if (!video.publishedAt) return true; // Include videos with no publish date
+      
+      const publishDate = new Date(video.publishedAt);
+      return publishDate >= thirtyDaysAgo;
+    });
     
     // Calculate impact score for each video
     const videosWithScore = recentVideos.map(video => ({

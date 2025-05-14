@@ -37,13 +37,19 @@ export class SocialMediaService {
     const viewWeight = 0.1;
     const saveWeight = 2;
     
-    // Calculate base engagement score
+    // Calculate base engagement score with safe defaults
+    const likes = post.likes ?? 0;
+    const comments = post.comments ?? 0;
+    const shares = post.shares ?? 0;
+    const views = post.views ?? 0;
+    const saves = post.saves ?? 0;
+    
     let score = 
-      (post.likes || 0) * likeWeight +
-      (post.comments || 0) * commentWeight +
-      (post.shares || 0) * shareWeight +
-      (post.views || 0) * viewWeight +
-      (post.saves || 0) * saveWeight;
+      likes * likeWeight +
+      comments * commentWeight +
+      shares * shareWeight +
+      views * viewWeight +
+      saves * saveWeight;
     
     // Apply platform multiplier based on reach
     const platformMultiplier = this.getPlatformReachMultiplier(post.platform);
@@ -116,8 +122,10 @@ export class SocialMediaService {
       // Count occurrences of each platform
       platformCounts[post.platform] = (platformCounts[post.platform] || 0) + 1;
       
-      // Calculate reach based on views or other metrics
-      const postReach = post.views || (post.likes * 5) || 0; // Estimate reach if views not available
+      // Calculate reach based on views or other metrics with safe defaults
+      const views = post.views ?? 0;
+      const likes = post.likes ?? 0;
+      const postReach = views || (likes * 5); // Estimate reach if views not available
       totalReach += postReach;
     });
     
@@ -164,17 +172,33 @@ export class SocialMediaService {
       return undefined;
     }
     
+    // Create updates object with only the properties that need to be updated
+    const updates: any = { updatedAt: new Date() };
+    
+    if (engagement.likes !== undefined) {
+      updates.likes = engagement.likes;
+    }
+    
+    if (engagement.comments !== undefined) {
+      updates.comments = engagement.comments;
+    }
+    
+    if (engagement.shares !== undefined) {
+      updates.shares = engagement.shares;
+    }
+    
+    if (engagement.views !== undefined) {
+      updates.views = engagement.views;
+    }
+    
+    if (engagement.saves !== undefined) {
+      updates.saves = engagement.saves;
+    }
+    
     // Update engagement metrics
     const updatedPost = await db
       .update(socialMediaPosts)
-      .set({
-        likes: engagement.likes !== undefined ? engagement.likes : post.likes,
-        comments: engagement.comments !== undefined ? engagement.comments : post.comments,
-        shares: engagement.shares !== undefined ? engagement.shares : post.shares,
-        views: engagement.views !== undefined ? engagement.views : post.views,
-        saves: engagement.saves !== undefined ? engagement.saves : post.saves,
-        updatedAt: new Date()
-      })
+      .set(updates)
       .where(eq(socialMediaPosts.id, postId))
       .returning();
     
@@ -185,16 +209,19 @@ export class SocialMediaService {
    * Get trending social media posts across all products
    */
   public async getTrendingSocialMediaPosts(limit = 10): Promise<SocialMediaPost[]> {
-    // Get recent posts (last 30 days)
+    // Get all posts - filtering by date will be done in memory
+    const posts = await db
+      .select()
+      .from(socialMediaPosts);
+    
+    // Filter for recent posts (last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    const recentPosts = await db
-      .select()
-      .from(socialMediaPosts)
-      .where(and(
-        socialMediaPosts.postedAt >= thirtyDaysAgo
-      ));
+    const recentPosts = posts.filter(post => {
+      const postDate = new Date(post.postedAt);
+      return postDate >= thirtyDaysAgo;
+    });
     
     // Calculate engagement score for each post
     const postsWithScore = recentPosts.map(post => ({
