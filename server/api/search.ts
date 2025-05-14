@@ -1,4 +1,4 @@
-import { storage } from "../storage";
+import { storage } from "../storage/index";
 import { type ProductSearch } from "@shared/schema";
 
 /**

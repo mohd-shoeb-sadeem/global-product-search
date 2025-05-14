@@ -1,4 +1,4 @@
-import { storage } from "../storage";
+import { storage } from "../storage/index";
 
 /**
  * Get a product by ID

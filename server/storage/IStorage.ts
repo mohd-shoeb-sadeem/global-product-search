@@ -13,7 +13,8 @@ import {
   type ProductComparison,
   type Order, type InsertOrder,
   type OrderItem,
-  type Session
+  type Session,
+  orderItems
 } from "@shared/schema";
 
 // Define the storage interface
@@ -88,7 +89,7 @@ export interface IStorage {
   getUserComparisons(userId: number): Promise<ProductComparison[]>;
   
   // Orders
-  createOrder(orderData: InsertOrder, items: Omit<InsertOrderItem, "orderId">[]): Promise<Order>;
+  createOrder(orderData: InsertOrder, items: Omit<typeof orderItems.$inferInsert, "orderId">[]): Promise<Order>;
   getUserOrders(userId: number): Promise<Order[]>;
   getOrderDetails(orderId: number): Promise<(Order & { items: OrderItem[] }) | undefined>;
   updateOrderStatus(orderId: number, status: string): Promise<Order | undefined>;
