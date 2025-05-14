@@ -7,8 +7,10 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import ProductPage from "@/pages/ProductPage";
 import SearchResults from "@/pages/SearchResults";
+import AdminPage from "@/pages/AdminPage";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import { UpdateNotifications } from "@/components/UpdateNotifications";
 
 function Router() {
   return (
@@ -16,6 +18,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/product/:id" component={ProductPage} />
       <Route path="/search" component={SearchResults} />
+      <Route path="/admin" component={AdminPage} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -31,6 +34,7 @@ function App() {
             <Router />
           </main>
           <Footer />
+          <UpdateNotifications />
         </div>
         <Toaster />
       </TooltipProvider>

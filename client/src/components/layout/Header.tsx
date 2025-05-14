@@ -30,6 +30,12 @@ const Header: React.FC = () => {
           <button className="ml-2 p-2 text-dark-light hover:text-primary">
             <i className="ri-user-line text-2xl"></i>
           </button>
+          <Link href="/admin">
+            <a className="ml-4 p-2 text-dark-light hover:text-primary flex items-center">
+              <i className="ri-settings-line text-2xl"></i>
+              <span className="ml-1 hidden lg:inline-block">Admin</span>
+            </a>
+          </Link>
         </div>
       </div>
       
