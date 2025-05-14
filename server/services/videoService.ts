@@ -212,6 +212,8 @@ export class VideoService {
     likeCount?: number;
     commentCount?: number;
     shareCount?: number;
+    channelSubscriberCount?: number;
+    videoQuality?: number;
   }): Promise<VideoReview | undefined> {
     const [video] = await db
       .select()
@@ -222,16 +224,37 @@ export class VideoService {
       return undefined;
     }
     
+    // Create updates object with only the properties that need to be updated
+    const updates: any = { updatedAt: new Date() };
+    
+    if (engagement.viewCount !== undefined) {
+      updates.viewCount = engagement.viewCount;
+    }
+    
+    if (engagement.likeCount !== undefined) {
+      updates.likeCount = engagement.likeCount;
+    }
+    
+    if (engagement.commentCount !== undefined) {
+      updates.commentCount = engagement.commentCount;
+    }
+    
+    if (engagement.shareCount !== undefined) {
+      updates.shareCount = engagement.shareCount;
+    }
+    
+    if (engagement.channelSubscriberCount !== undefined) {
+      updates.channelSubscriberCount = engagement.channelSubscriberCount;
+    }
+    
+    if (engagement.videoQuality !== undefined) {
+      updates.videoQuality = engagement.videoQuality;
+    }
+    
     // Update engagement metrics
     const [updatedVideo] = await db
       .update(videoReviews)
-      .set({
-        viewCount: engagement.viewCount !== undefined ? engagement.viewCount : video.viewCount,
-        likeCount: engagement.likeCount !== undefined ? engagement.likeCount : video.likeCount,
-        commentCount: engagement.commentCount !== undefined ? engagement.commentCount : video.commentCount,
-        shareCount: engagement.shareCount !== undefined ? engagement.shareCount : video.shareCount,
-        updatedAt: new Date()
-      })
+      .set(updates)
       .where(eq(videoReviews.id, videoId))
       .returning();
     

@@ -6,6 +6,9 @@ export enum MessageType {
   NewProducts = 'new_products',
   PriceUpdates = 'price_updates',
   AvailabilityUpdates = 'availability_updates',
+  TrendingSocialMedia = 'trending_social_media',
+  TrendingVideos = 'trending_videos',
+  HighEngagementContent = 'high_engagement_content',
   SystemNotification = 'system_notification'
 }
 
@@ -104,6 +107,108 @@ export class WebSocketService {
     this.broadcast({
       type: MessageType.AvailabilityUpdates,
       data: { count, message: `${count} products have updated availability` },
+      timestamp: Date.now()
+    });
+  }
+
+  /**
+   * Broadcast trending social media posts
+   */
+  public broadcastTrendingSocialMedia(posts: any[]): void {
+    this.broadcast({
+      type: MessageType.TrendingSocialMedia,
+      data: {
+        count: posts.length,
+        posts: posts.map(post => ({
+          id: post.id,
+          productId: post.productId,
+          platform: post.platform,
+          author: post.author,
+          content: post.content.substring(0, 100) + (post.content.length > 100 ? '...' : ''),
+          likes: post.likes ?? 0,
+          comments: post.comments ?? 0,
+          shares: post.shares ?? 0,
+          views: post.views ?? 0
+        })),
+        message: `${posts.length} trending social media posts`
+      },
+      timestamp: Date.now()
+    });
+  }
+
+  /**
+   * Broadcast trending video reviews
+   */
+  public broadcastTrendingVideos(videos: any[]): void {
+    this.broadcast({
+      type: MessageType.TrendingVideos,
+      data: {
+        count: videos.length,
+        videos: videos.map(video => ({
+          id: video.id,
+          productId: video.productId,
+          platform: video.platform,
+          title: video.title,
+          channelName: video.channelName,
+          viewCount: video.viewCount ?? 0,
+          likeCount: video.likeCount ?? 0,
+          thumbnail: video.thumbnail,
+          url: video.url
+        })),
+        message: `${videos.length} trending video reviews`
+      },
+      timestamp: Date.now()
+    });
+  }
+
+  /**
+   * Broadcast high engagement content
+   */
+  public broadcastHighEngagementContent(content: { 
+    socialMedia?: any[], 
+    videos?: any[] 
+  }): void {
+    const videoCount = content.videos?.length ?? 0;
+    const socialCount = content.socialMedia?.length ?? 0;
+    const totalCount = videoCount + socialCount;
+
+    this.broadcast({
+      type: MessageType.HighEngagementContent,
+      data: {
+        totalCount,
+        videoCount,
+        socialCount,
+        content: {
+          socialMedia: content.socialMedia?.map(post => ({
+            id: post.id,
+            productId: post.productId,
+            platform: post.platform,
+            author: post.author,
+            content: post.content.substring(0, 100) + (post.content.length > 100 ? '...' : ''),
+            engagement: {
+              likes: post.likes ?? 0,
+              comments: post.comments ?? 0,
+              shares: post.shares ?? 0,
+              views: post.views ?? 0
+            }
+          })) ?? [],
+          videos: content.videos?.map(video => ({
+            id: video.id,
+            productId: video.productId,
+            platform: video.platform,
+            title: video.title,
+            channelName: video.channelName,
+            engagement: {
+              viewCount: video.viewCount ?? 0,
+              likeCount: video.likeCount ?? 0,
+              commentCount: video.commentCount ?? 0,
+              shareCount: video.shareCount ?? 0
+            },
+            thumbnail: video.thumbnail
+          })) ?? []
+        },
+        message: `${totalCount} high-engagement content items updated`
+      },
       timestamp: Date.now()
     });
   }

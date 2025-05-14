@@ -241,6 +241,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Running scheduled product update...');
         const results = await productUpdater.runFullUpdate();
         console.log('Scheduled update completed:', results);
+        
+        // Also fetch and broadcast trending content
+        try {
+          // Get trending social media posts
+          const trendingSocialMedia = await socialMediaService.getTrendingSocialMediaPosts(10);
+          if (trendingSocialMedia.length > 0) {
+            global.wsService.broadcastTrendingSocialMedia(trendingSocialMedia);
+          }
+          
+          // Get trending videos
+          const trendingVideos = await videoService.getTrendingVideoReviews(5);
+          if (trendingVideos.length > 0) {
+            global.wsService.broadcastTrendingVideos(trendingVideos);
+          }
+          
+          // If we have both types of content, also broadcast high engagement content
+          if (trendingSocialMedia.length > 0 || trendingVideos.length > 0) {
+            global.wsService.broadcastHighEngagementContent({
+              socialMedia: trendingSocialMedia.slice(0, 3), // Top 3 social media posts
+              videos: trendingVideos.slice(0, 2) // Top 2 videos
+            });
+          }
+        } catch (contentError) {
+          console.error('Error broadcasting trending content:', contentError);
+        }
       } catch (error) {
         console.error('Error in scheduled update:', error);
       }
@@ -265,6 +290,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false,
         message: 'No auto-updates were running'
       });
+    }
+  });
+  
+  // Social media and video trending content API endpoints
+  apiRouter.post('/content/update-trending', async (req, res) => {
+    try {
+      // Get trending social media posts
+      const trendingSocialMedia = await socialMediaService.getTrendingSocialMediaPosts(10);
+      
+      // Get trending videos
+      const trendingVideos = await videoService.getTrendingVideoReviews(5);
+      
+      // Broadcast to connected clients
+      if (trendingSocialMedia.length > 0) {
+        global.wsService.broadcastTrendingSocialMedia(trendingSocialMedia);
+      }
+      
+      if (trendingVideos.length > 0) {
+        global.wsService.broadcastTrendingVideos(trendingVideos);
+      }
+      
+      // If we have either type of content, broadcast high engagement content
+      if (trendingSocialMedia.length > 0 || trendingVideos.length > 0) {
+        global.wsService.broadcastHighEngagementContent({
+          socialMedia: trendingSocialMedia.slice(0, 3), // Top 3 social media posts
+          videos: trendingVideos.slice(0, 2) // Top 2 videos
+        });
+      }
+      
+      res.json({
+        success: true,
+        socialMediaCount: trendingSocialMedia.length,
+        videosCount: trendingVideos.length,
+        message: `Updated trending content with ${trendingSocialMedia.length} social media posts and ${trendingVideos.length} videos`
+      });
+    } catch (error) {
+      console.error('Error updating trending content:', error);
+      res.status(500).json({ message: 'Failed to update trending content' });
     }
   });
 
