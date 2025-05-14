@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage/index";
 import { z } from "zod";
 import { productSearchSchema } from "@shared/schema";
+import { ProductUpdater } from "./services/productUpdater";
+import { WebSocketService, MessageType } from "./services/websocketService";
 
 // API routes
 import { searchProducts, getSearchSuggestions } from "./api/search";
@@ -148,9 +150,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Product update routes
+  apiRouter.post('/products/update-check', async (req, res) => {
+    try {
+      const productUpdater = new ProductUpdater();
+      const updateResults = await productUpdater.checkForNewArrivals();
+      
+      res.json({
+        success: true,
+        newProducts: updateResults.newProducts.length,
+        newRetailers: updateResults.retailerUpdates.length,
+        message: `Found ${updateResults.newProducts.length} new products with ${updateResults.retailerUpdates.length} retailer entries`
+      });
+    } catch (error) {
+      console.error('Error checking for product updates:', error);
+      res.status(500).json({ message: 'Failed to check for product updates' });
+    }
+  });
+
+  apiRouter.post('/products/update-prices', async (req, res) => {
+    try {
+      const productUpdater = new ProductUpdater();
+      const updatedCount = await productUpdater.updateProductPrices();
+      
+      res.json({
+        success: true,
+        updatedPrices: updatedCount,
+        message: `Updated prices for ${updatedCount} retailers`
+      });
+    } catch (error) {
+      console.error('Error updating product prices:', error);
+      res.status(500).json({ message: 'Failed to update product prices' });
+    }
+  });
+
+  apiRouter.post('/products/update-availability', async (req, res) => {
+    try {
+      const productUpdater = new ProductUpdater();
+      const updatedCount = await productUpdater.updateProductAvailability();
+      
+      res.json({
+        success: true,
+        updatedAvailability: updatedCount,
+        message: `Updated availability for ${updatedCount} retailers`
+      });
+    } catch (error) {
+      console.error('Error updating product availability:', error);
+      res.status(500).json({ message: 'Failed to update product availability' });
+    }
+  });
+
+  apiRouter.post('/products/update-all', async (req, res) => {
+    try {
+      const productUpdater = new ProductUpdater();
+      const results = await productUpdater.runFullUpdate();
+      
+      res.json({
+        success: true,
+        newProducts: results.newProducts,
+        updatedPrices: results.priceUpdates,
+        updatedAvailability: results.availabilityUpdates,
+        message: `Added ${results.newProducts} new products, updated ${results.priceUpdates} prices and ${results.availabilityUpdates} availability statuses`
+      });
+    } catch (error) {
+      console.error('Error running full product update:', error);
+      res.status(500).json({ message: 'Failed to run full product update' });
+    }
+  });
+
+  // Schedule a regular update (every 60 seconds)
+  // Note: In a production environment, you would use a more robust scheduling system
+  apiRouter.post('/products/start-auto-updates', (req, res) => {
+    // Check if updates are already running
+    if (global.updateInterval) {
+      clearInterval(global.updateInterval);
+    }
+    
+    // Schedule updates (default every 60 seconds)
+    const interval = req.body.interval || 60000;
+    const productUpdater = new ProductUpdater();
+    
+    global.updateInterval = setInterval(async () => {
+      try {
+        console.log('Running scheduled product update...');
+        const results = await productUpdater.runFullUpdate();
+        console.log('Scheduled update completed:', results);
+      } catch (error) {
+        console.error('Error in scheduled update:', error);
+      }
+    }, interval);
+    
+    res.json({
+      success: true,
+      message: `Auto-updates started with interval of ${interval / 1000} seconds`
+    });
+  });
+
+  apiRouter.post('/products/stop-auto-updates', (req, res) => {
+    if (global.updateInterval) {
+      clearInterval(global.updateInterval);
+      global.updateInterval = null;
+      res.json({
+        success: true,
+        message: 'Auto-updates stopped'
+      });
+    } else {
+      res.json({
+        success: false,
+        message: 'No auto-updates were running'
+      });
+    }
+  });
+
   // Mount API router
   app.use('/api', apiRouter);
 
+  // Create HTTP server and WebSocket server
   const httpServer = createServer(app);
+  
+  // Initialize WebSocket service for real-time updates
+  const wsService = new WebSocketService(httpServer);
+  
+  // Store the WebSocket service globally for use in other parts of the application
+  global.wsService = wsService;
+  
   return httpServer;
 }
