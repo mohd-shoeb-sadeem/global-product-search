@@ -110,8 +110,16 @@ export const videoReviews = pgTable("video_reviews", {
   channelName: text("channel_name").notNull(),
   channelAvatar: text("channel_avatar"),
   viewCount: integer("view_count"),
+  likeCount: integer("like_count"),
+  commentCount: integer("comment_count"),
+  shareCount: integer("share_count"),
+  channelSubscriberCount: integer("channel_subscriber_count"),
+  duration: integer("duration"), // in seconds
+  videoQuality: real("video_quality"), // score from 1-5
+  publishedAt: timestamp("published_at"),
   description: text("description"),
   url: text("url").notNull(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -134,9 +142,18 @@ export const socialMediaPosts = pgTable("social_media_posts", {
   authorAvatar: text("author_avatar"),
   content: text("content").notNull(),
   sentiment: text("sentiment"), // positive, negative, neutral
+  likes: integer("likes").default(0),
+  comments: integer("comments").default(0),
+  shares: integer("shares").default(0),
+  views: integer("views").default(0),
+  saves: integer("saves").default(0),
+  authorFollowerCount: integer("author_follower_count"),
+  verified: boolean("verified").default(false),
+  postedAt: timestamp("posted_at").notNull(),
   images: text("images").array(),
   url: text("url").notNull(),
-  createdAt: timestamp("post_date").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
   retrievedAt: timestamp("retrieved_at").notNull().defaultNow(),
 });
 

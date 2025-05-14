@@ -5,6 +5,8 @@ import { z } from "zod";
 import { productSearchSchema } from "@shared/schema";
 import { ProductUpdater } from "./services/productUpdater";
 import { WebSocketService, MessageType } from "./services/websocketService";
+import { SocialMediaService } from "./services/socialMediaService";
+import { VideoService } from "./services/videoService";
 
 // API routes
 import { searchProducts, getSearchSuggestions } from "./api/search";
